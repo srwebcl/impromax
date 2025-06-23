@@ -1,0 +1,976 @@
+<!DOCTYPE html>
+<html lang="es" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel Interactivo del Embudo de Ventas - Impromax</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Chosen Palette: Warm Neutrals -->
+    <!-- Application Structure Plan: The application maintains a top-down, single-page dashboard for intuitive navigation. The "Overview" section is enhanced with a comprehensive, visually mapped sales funnel that precisely mirrors the user's provided diagram, incorporating specific stages like 'Email Venta' and a detailed 'Remarketing' loop. This funnel serves as the central interactive navigation hub. A "Customer Roadmap" section explicitly details the customer journey, linking directly to Impromax's actions. The four core funnel stages (Attraction, Consideration, Conversion, Loyalty) have been significantly expanded to include granular details on Google Ads, Meta Ads, and Brevo (email marketing) campaigns, product focus, and budget allocation strategies. This structure provides a holistic view, combining high-level navigation with in-depth tactical information for each stage, tailored to Impromax's specific products and sales goals. -->
+    <!-- Visualization & Content Choices: 
+        - Report Info: Sales Goal & Budget Recommendation -> Goal: Inform -> Viz: Key Metric Cards, Summary Text. Justification: Provides immediate high-level context.
+        - Report Info: Budget Splits (Google/Meta) -> Goal: Compare -> Viz: Interactive Donut Charts (Chart.js) -> Interaction: Tooltips on hover provide exact percentages. Justification: Donut charts are ideal for showing parts of a whole, making budget allocation instantly clear.
+        - Report Info: Funnel Stages & Remarketing Loop (from provided image) -> Goal: Organize/Inform -> Viz: Custom HTML/CSS Block-and-Line Funnel Diagram with clearly labeled steps, including specific email stages and a distinct 'Remarketing' branch with dynamic connections -> Interaction: Clickable segments scroll to the relevant detailed section. Justification: Directly translates the user's visual request into an interactive, structured flow, showing the core sales journey and the remarketing strategy as a loop. This is crucial for user understanding of the complex flow.
+        - Report Info: Customer Journey -> Goal: Inform/Organize -> Viz: Interconnected Cards with HTML/CSS elements (like lines/arrows) for flow -> Interaction: Static, clear presentation. Justification: Visually clarifies the customer's progression and Impromax's corresponding actions.
+        - Report Info: Detailed Campaign Strategies (Google Ads, Meta Ads, Brevo Email, CRO) per Funnel Stage -> Goal: Inform/Organize -> Viz: Detailed Text Blocks within styled cards, organized into collapsible/expandable sections for clarity -> Interaction: Static text, but organized for easy consumption. Justification: Provides the necessary granular detail for implementation without overwhelming the user on initial view.
+        - Report Info: Products to Promote -> Goal: Inform -> Viz: Lists within relevant campaign sections. Justification: Integrates product focus directly into tactical plans.
+        - Report Info: Tools -> Goal: Inform -> Viz: Styled Text Blocks. Justification: Simple, clean presentation of required tools.
+    -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #F8F7F4;
+            color: #383734;
+        }
+        .warm-bg { background-color: #F8F7F4; }
+        .card-bg { background-color: #FFFFFF; }
+        .primary-text { color: #383734; }
+        .secondary-text { color: #6e6d69; }
+        .accent-color { color: #D97706; }
+        .accent-bg { background-color: #D97706; }
+        .accent-border { border-color: #D97706; }
+        .soft-border { border-color: #E2E0DD; }
+
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 400px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 300px;
+            max-height: 350px;
+        }
+        @media (min-width: 768px) {
+            .chart-container {
+                height: 350px;
+            }
+        }
+        
+        /* New Funnel Styles inspired by the image */
+        .new-funnel-container {
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            position: relative;
+            max-width: 1200px; /* Adjust as needed */
+            margin: 0 auto;
+            padding-bottom: 50px; /* Space for remarketing line */
+        }
+
+        .funnel-main-path {
+            display: flex;
+            align-items: center;
+            position: relative;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 1rem; /* Adjust gap between steps */
+            margin-bottom: 80px; /* Space for remarketing line below on mobile */
+        }
+        @media (min-width: 768px) {
+             .funnel-main-path {
+                flex-wrap: nowrap;
+                justify-content: flex-start;
+                gap: 0;
+                margin-bottom: 0;
+             }
+        }
+
+        .funnel-step-box {
+            background-color: #FFFFFF;
+            border-radius: 0.5rem;
+            padding: 0.75rem 0.5rem; /* Adjusted for smaller width */
+            text-align: center;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            transition: all 0.2s ease-in-out;
+            cursor: pointer;
+            width: 120px; /* Fixed width for consistency, smaller */
+            flex-shrink: 0;
+        }
+        .funnel-step-box:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .funnel-step-box .label {
+            font-weight: 600;
+            font-size: 0.75rem; /* text-xs */
+            color: #383734;
+            line-height: 1.2;
+        }
+        .funnel-step-box .icon {
+            font-size: 1.25rem; /* text-xl */
+            color: #D97706;
+            margin-bottom: 0.25rem;
+        }
+
+        .funnel-arrow {
+            width: 25px; /* Length of the arrow line */
+            height: 2px;
+            background-color: #D97706;
+            position: relative;
+            margin: 0 5px; /* Space between box and arrow */
+            flex-shrink: 0;
+        }
+        .funnel-arrow::after {
+            content: '';
+            position: absolute;
+            right: 0;
+            top: -4px;
+            width: 0;
+            height: 0;
+            border-top: 5px solid transparent;
+            border-bottom: 5px solid transparent;
+            border-left: 8px solid #D97706;
+        }
+
+        /* Responsive arrangement for funnel arrows */
+        @media (max-width: 767px) {
+            .funnel-main-path .funnel-step-box {
+                margin-bottom: 0.5rem; /* Reduced margin */
+                width: 100px; /* Even smaller for mobile */
+            }
+            .funnel-main-path .funnel-arrow {
+                width: 2px;
+                height: 20px; /* Shorter vertical arrow */
+                margin: 5px 0;
+                transform: rotate(90deg); /* Rotate arrow for vertical flow */
+            }
+            .funnel-main-path .funnel-arrow::after {
+                border-left: none;
+                border-top: 8px solid #D97706;
+                border-right: 5px solid transparent;
+                border-left: 5px solid transparent;
+                top: auto;
+                bottom: 0;
+                left: -4px;
+            }
+        }
+        
+        /* Specific positioning for Remarketing */
+        .remarketing-line-v {
+            position: absolute;
+            width: 2px;
+            background-color: #D97706;
+            z-index: 5;
+        }
+        .remarketing-line-h {
+            position: absolute;
+            height: 2px;
+            background-color: #D97706;
+            z-index: 5;
+        }
+        .remarketing-line-arrow-h::after {
+            content: '';
+            position: absolute;
+            right: 0;
+            top: -4px;
+            width: 0;
+            height: 0;
+            border-top: 5px solid transparent;
+            border-bottom: 5px solid transparent;
+            border-left: 8px solid #D97706;
+        }
+
+        .remarketing-path {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            background-color: #FFF7ED; /* Lighter accent background */
+            border: 1px solid #FDBA74;
+            border-radius: 0.5rem;
+            padding: 0.75rem 1.25rem;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        .remarketing-label {
+            font-weight: 700;
+            color: #D97706;
+            font-size: 0.875rem;
+            flex-shrink: 0;
+        }
+        .remarketing-funnel-step-box {
+             background-color: #FFFFFF;
+            border-radius: 0.5rem;
+            padding: 0.5rem 0.75rem; /* Smaller padding */
+            text-align: center;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            transition: all 0.2s ease-in-out;
+            cursor: pointer;
+            width: 110px; /* Fixed width */
+            flex-shrink: 0;
+        }
+        .remarketing-funnel-step-box .label {
+            font-weight: 600;
+            font-size: 0.7rem; /* Even smaller font */
+            color: #383734;
+            line-height: 1.2;
+        }
+        .remarketing-funnel-arrow {
+            width: 20px;
+            height: 2px;
+            background-color: #D97706;
+            position: relative;
+        }
+        .remarketing-funnel-arrow::after {
+            content: '';
+            position: absolute;
+            right: 0;
+            top: -4px;
+            width: 0;
+            height: 0;
+            border-top: 5px solid transparent;
+            border-bottom: 5px solid transparent;
+            border-left: 8px solid #D97706;
+        }
+
+        @media (min-width: 768px) {
+            .remarketing-path {
+                position: absolute; /* Position below main funnel */
+                left: 50%;
+                transform: translateX(-50%);
+                bottom: -70px; /* Adjusted to be below the main funnel */
+            }
+             .remarketing-line-v.down-from-sales {
+                left: calc(50% - 150px); /* Adjust based on sales page box position */
+                top: 100%; /* Relative to funnel-main-path */
+                height: 70px; /* Connects to remarketing */
+            }
+            .remarketing-line-h.to-facebook {
+                left: calc(50% - 150px - 100px); /* Extend left from vertical line */
+                top: 100% + 70px; /* Aligned with remarketing path top */
+                width: 100px;
+            }
+            .remarketing-line-v.up-to-sales {
+                right: calc(50% - 150px); /* Adjust based on sales page box position */
+                bottom: 100%; /* Relative to funnel-main-path */
+                height: 70px;
+            }
+        }
+        @media (max-width: 767px) {
+            .new-funnel-container {
+                flex-direction: column;
+                align-items: center;
+            }
+            .remarketing-path {
+                flex-direction: column;
+                margin-top: 20px;
+            }
+            .remarketing-funnel-arrow {
+                height: 20px;
+                width: 2px;
+                transform: rotate(90deg);
+            }
+             .remarketing-funnel-arrow::after {
+                border-left: none;
+                border-top: 8px solid #D97706;
+                border-right: 5px solid transparent;
+                border-left: 5px solid transparent;
+                top: auto;
+                bottom: 0;
+                left: -4px;
+            }
+        }
+
+        .fade-in {
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+        }
+        .is-visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .roadmap-item {
+            position: relative;
+        }
+        .roadmap-line {
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 2px;
+            background-color: #E2E0DD;
+            top: 0;
+            bottom: 0;
+        }
+        .roadmap-dot {
+            position: absolute;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 16px;
+            height: 16px;
+            background-color: #D97706;
+            border-radius: 50%;
+            border: 2px solid #F8F7F4;
+            z-index: 10;
+        }
+        .roadmap-item:last-child .roadmap-line {
+            height: 50%; /* Only extend halfway down for the last item */
+        }
+    </style>
+</head>
+<body class="warm-bg primary-text">
+
+    <header class="bg-white/80 backdrop-blur-lg sticky top-0 z-50 shadow-sm">
+        <nav class="container mx-auto px-6 py-3 flex justify-between items-center">
+            <h1 class="text-xl md:text-2xl font-bold primary-text">
+                <span class="accent-color">Impromax</span> Funnel
+            </h1>
+            <div class="hidden md:flex space-x-6 text-sm font-medium">
+                <a href="#overview" class="secondary-text hover:accent-color transition-colors">Resumen</a>
+                <a href="#roadmap" class="secondary-text hover:accent-color transition-colors">Hoja de Ruta</a>
+                <a href="#attraction" class="secondary-text hover:accent-color transition-colors">Atracción</a>
+                <a href="#consideration" class="secondary-text hover:accent-color transition-colors">Consideración</a>
+                <a href="#conversion" class="secondary-text hover:accent-color transition-colors">Conversión</a>
+                <a href="#loyalty" class="secondary-text hover:accent-color transition-colors">Fidelización</a>
+            </div>
+             <div class="md:hidden">
+                <select id="mobile-nav" class="bg-white border border-gray-300 rounded-md p-2 text-sm">
+                    <option value="#">Menú</option>
+                    <option value="#overview">Resumen</option>
+                    <option value="#roadmap">Hoja de Ruta</option>
+                    <option value="#attraction">Atracción</option>
+                    <option value="#consideration">Consideración</option>
+                    <option value="#conversion">Conversión</option>
+                    <option value="#loyalty">Fidelización</option>
+                </select>
+            </div>
+        </nav>
+    </header>
+
+    <main class="container mx-auto px-6 py-12">
+
+        <section id="overview" class="text-center mb-16 fade-in">
+            <h2 class="text-3xl md:text-4xl font-bold mb-4">Plan Estratégico de Marketing Digital</h2>
+            <p class="max-w-3xl mx-auto secondary-text mb-8">
+                Este panel interactivo detalla la estrategia de marketing digital de Impromax, diseñada para alcanzar la meta de **$3.000.000 CLP en ventas durante el primer mes**. A través de una combinación robusta de Google Ads, Meta Ads y automatización con Brevo (anteriormente Sendinblue), buscamos posicionar a Impromax en los primeros puestos y maximizar las conversiones de repuestos eléctricos de automatización.
+            </p>
+            <div class="flex justify-center items-center gap-4 md:gap-8 flex-wrap mb-12">
+                <div class="card-bg p-4 rounded-xl shadow-md text-center">
+                    <p class="text-sm secondary-text">Meta Venta 1er Mes</p>
+                    <p class="text-xl font-bold accent-color">$3.000.000 CLP</p>
+                </div>
+                <div class="card-bg p-4 rounded-xl shadow-md text-center">
+                    <p class="text-sm secondary-text">Presupuesto Google Ads Diario</p>
+                    <p class="text-xl font-bold accent-color">$15-25K CLP</p>
+                </div>
+                <div class="card-bg p-4 rounded-xl shadow-md text-center">
+                    <p class="text-sm secondary-text">Presupuesto Meta Ads Diario</p>
+                    <p class="text-xl font-bold accent-color">$3-5K CLP</p>
+                </div>
+            </div>
+
+            <h3 class="text-2xl font-bold mb-6">El Embudo de Ventas Mapeado</h3>
+            <p class="max-w-xl mx-auto secondary-text mb-8">
+                Esta sección ilustra el flujo del cliente a través del embudo de ventas online de Impromax, incluyendo el bucle de remarketing crucial para la optimización de conversiones. Haz clic en cada paso para ver detalles de la fase correspondiente.
+            </p>
+            
+            <!-- New Funnel Layout inspired by the image -->
+            <div class="new-funnel-container mb-20">
+                <div class="funnel-main-path relative">
+                    <div class="funnel-step-box" onclick="scrollToSection('attraction')">
+                        <span class="icon">🔍</span>
+                        <p class="label">Usuarios con Interés</p>
+                    </div>
+                    <div class="funnel-arrow"></div>
+                    <div class="funnel-step-box" onclick="scrollToSection('consideration')">
+                        <span class="icon">📧</span>
+                        <p class="label">Email Venta (Brevo)</p>
+                    </div>
+                    <div class="funnel-arrow"></div>
+                    <div class="funnel-step-box sales-page-box" id="sales-page-box" onclick="scrollToSection('conversion')">
+                        <span class="icon">🛒</span>
+                        <p class="label">Sales Page (Jumpseller)</p>
+                    </div>
+                    <div class="funnel-arrow"></div>
+                    <div class="funnel-step-box" onclick="scrollToSection('conversion')">
+                        <span class="icon">💰</span>
+                        <p class="label">Página de Pago</p>
+                    </div>
+                    <div class="funnel-arrow"></div>
+                    <div class="funnel-step-box" onclick="scrollToSection('loyalty')">
+                        <span class="icon">🎉</span>
+                        <p class="label">Email Bienvenida (Brevo)</p>
+                    </div>
+
+                    <!-- Remarketing Connection Lines -->
+                    <div id="remarketing-line-1" class="remarketing-line-v hidden"></div>
+                    <div id="remarketing-line-2" class="remarketing-line-h hidden"></div>
+                    <div id="remarketing-line-3" class="remarketing-line-v hidden"></div>
+                    <div id="remarketing-line-4" class="remarketing-line-h remarketing-line-arrow-h hidden"></div>
+                </div>
+
+                <!-- Remarketing branch -->
+                <div class="remarketing-path absolute" id="remarketing-path-container">
+                    <p class="remarketing-label">Remarketing</p>
+                    <div class="remarketing-funnel-arrow"></div>
+                    <div class="remarketing-funnel-step-box">
+                        <span class="icon">👥</span>
+                        <p class="label">Audiencia personalizada (Facebook)</p>
+                    </div>
+                    <div class="remarketing-funnel-arrow"></div>
+                    <div class="remarketing-funnel-step-box" onclick="scrollToSection('consideration')">
+                        <span class="icon">📱</span>
+                        <p class="label">Anuncios de Remarketing (Meta Ads)</p>
+                    </div>
+                    <div class="remarketing-funnel-arrow"></div> 
+                </div>
+            </div>
+            <!-- End New Funnel Layout -->
+
+            <div class="mt-20">
+                <h4 class="font-bold text-xl mb-4">Recomendación de Presupuesto Detallado</h4>
+                <p class="secondary-text mb-4">Para alcanzar la meta de **$3.000.000 CLP en ventas el primer mes**, y considerando el posicionamiento de marca, proponemos la siguiente asignación de presupuesto, que busca un ROAS (Retorno de la Inversión Publicitaria) de aproximadamente **4.16x**. Este cálculo se basa en un presupuesto publicitario total mensual de $720.000 CLP ($24.000 CLP diarios en promedio).</p>
+                <div class="flex justify-center items-center gap-4 md:gap-8 flex-wrap">
+                    <div class="chart-container">
+                        <canvas id="googleAdsChart"></canvas>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="metaAdsChart"></canvas>
+                    </div>
+                </div>
+                 <p class="secondary-text text-sm mt-4 text-left">
+                    Este nivel de inversión ($18,000 - $30,000 CLP diarios) es más agresivo pero necesario para generar el volumen de tráfico y conversiones requerido para la meta de $3M, especialmente para posicionar productos clave y capturar la demanda existente de forma dominante, superando a la competencia.
+                </p>
+            </div>
+        </section>
+
+        <section id="roadmap" class="py-16 scroll-mt-20 fade-in">
+            <div class="text-center mb-12">
+                <span class="accent-bg text-white font-semibold py-1 px-3 rounded-full text-sm">Hoja de Ruta</span>
+                <h3 class="text-3xl font-bold mt-4">El Viaje Detallado del Cliente</h3>
+                <p class="max-w-3xl mx-auto mt-2 secondary-text">
+                    Comprende el camino que recorre tu cliente ideal y cómo Impromax actúa en cada punto de contacto para guiarlo hacia la compra y la lealtad, alineando nuestras acciones con sus necesidades y las herramientas disponibles.
+                </p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12 relative">
+                <div class="hidden md:block absolute inset-y-0 left-1/2 -ml-0.5 w-1 roadmap-line"></div>
+
+                <!-- Step 1 -->
+                <div class="roadmap-item flex flex-col items-center md:items-end text-center md:text-right relative mb-12 md:mb-0">
+                    <div class="roadmap-dot top-0 md:top-1/2"></div>
+                    <div class="card-bg p-6 rounded-lg shadow-sm w-full md:w-11/12">
+                        <h4 class="font-bold text-lg mb-2">1. Conciencia (Necesidad Detectada)</h4>
+                        <p class="secondary-text text-sm">
+                            El cliente identifica una necesidad (ej. falla en equipo, proyecto nuevo). Busca activamente el repuesto o solución online.
+                        </p>
+                    </div>
+                </div>
+                <div class="roadmap-item flex flex-col items-center md:items-start text-center md:text-left relative mb-12 md:mb-0">
+                    <div class="roadmap-dot top-0 md:top-1/2"></div>
+                    <div class="card-bg p-6 rounded-lg shadow-sm w-full md:w-11/12">
+                        <h4 class="font-bold text-lg mb-2">Impromax: Visibilidad Dominante</h4>
+                        <p class="secondary-text text-sm">
+                            A través de **Google Shopping** (Jumpseller Google Commerce) y **Google Search**, nos aseguramos de que Impromax sea la primera y más relevante opción visible para sus búsquedas directas de productos específicos y genéricos.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Step 2 -->
+                <div class="roadmap-item flex flex-col items-center md:items-end text-center md:text-right relative mb-12 md:mb-0">
+                    <div class="roadmap-dot top-0 md:top-1/2"></div>
+                    <div class="card-bg p-6 rounded-lg shadow-sm w-full md:w-11/12">
+                        <h4 class="font-bold text-lg mb-2">2. Consideración (Evaluación y Exploración)</h4>
+                        <p class="secondary-text text-sm">
+                            El cliente visita el sitio de Impromax (Jumpseller), compara productos, marcas, precios y condiciones. Puede añadir al carrito o abandonar.
+                        </p>
+                    </div>
+                </div>
+                <div class="roadmap-item flex flex-col items-center md:items-start text-center md:text-left relative mb-12 md:mb-0">
+                    <div class="roadmap-dot top-0 md:top-1/2"></div>
+                    <div class="card-bg p-6 rounded-lg shadow-sm w-full md:w-11/12">
+                        <h4 class="font-bold text-lg mb-2">Impromax: Reenganche Persuasivo</h4>
+                        <p class="secondary-text text-sm">
+                            Activamos **Remarketing Dinámico en Meta Ads** (Jumpseller Facebook/Instagram) y secuencias automatizadas de **Email Marketing con Brevo** para carritos abandonados o productos vistos, reforzando el valor y la urgencia.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Step 3 -->
+                <div class="roadmap-item flex flex-col items-center md:items-end text-center md:text-right relative mb-12 md:mb-0">
+                    <div class="roadmap-dot top-0 md:top-1/2"></div>
+                    <div class="card-bg p-6 rounded-lg shadow-sm w-full md:w-11/12">
+                        <h4 class="font-bold text-lg mb-2">3. Decisión (Cierre de Compra)</h4>
+                        <p class="secondary-text text-sm">
+                            El cliente decide comprar. Evalúa la confianza en el sitio, la disponibilidad de stock y la facilidad del proceso de pago.
+                        </p>
+                    </div>
+                </div>
+                <div class="roadmap-item flex flex-col items-center md:items-start text-center md:text-left relative mb-12 md:mb-0">
+                    <div class="roadmap-dot top-0 md:top-1/2"></div>
+                    <div class="card-bg p-6 rounded-lg shadow-sm w-full md:w-11/12">
+                        <h4 class="font-bold text-lg mb-2">Impromax: Optimización de Conversión</h4>
+                        <p class="secondary-text text-sm">
+                            Garantizamos una **Sales Page (Jumpseller)** informativa, un **Checkout** simplificado. Ofrecemos **soporte inmediato** vía **WhatsApp Business** (Jumpseller) para resolver cualquier duda final.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Step 4 -->
+                <div class="roadmap-item flex flex-col items-center md:items-end text-center md:text-right relative mb-12 md:mb-0">
+                    <div class="roadmap-dot top-0 md:top-1/2"></div>
+                    <div class="card-bg p-6 rounded-lg shadow-sm w-full md:w-11/12">
+                        <h4 class="font-bold text-lg mb-2">4. Post-compra (Uso y Satisfacción)</h4>
+                        <p class="secondary-text text-sm">
+                            El cliente recibe el producto, lo utiliza y evalúa su experiencia. Su satisfacción es clave para futuras interacciones y recomendaciones.
+                        </p>
+                    </div>
+                </div>
+                <div class="roadmap-item flex flex-col items-center md:items-start text-center md:text-left relative">
+                    <div class="roadmap-dot top-0 md:top-1/2"></div>
+                    <div class="card-bg p-6 rounded-lg shadow-sm w-full md:w-11/12">
+                        <h4 class="font-bold text-lg mb-2">Impromax: Fidelización y Valor Agregado</h4>
+                        <p class="secondary-text text-sm">
+                            Implementamos **emails de bienvenida (Brevo)**, seguimiento de pedido, solicitudes de reseña y contenido de valor para fomentar la recompra y la lealtad a largo plazo. Manteniendo el contacto vía **WhatsApp Business** para soporte post-venta.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+
+        <section id="attraction" class="py-16 scroll-mt-20 fade-in">
+            <div class="text-center mb-12">
+                <span class="accent-bg text-white font-semibold py-1 px-3 rounded-full text-sm">Fase 1</span>
+                <h3 class="text-3xl font-bold mt-4">Conocimiento y Atracción (Google Ads)</h3>
+                <p class="max-w-3xl mx-auto mt-2 secondary-text">
+                    En esta fase, el objetivo es captar a usuarios con alta intención de compra que buscan activamente repuestos eléctricos de automatización. La inversión se concentrará en Google Ads para asegurar un posicionamiento dominante y la máxima visibilidad, especialmente para los productos clave a impulsar.
+                </p>
+            </div>
+
+            <div class="grid md:grid-cols-2 gap-12">
+                <div>
+                    <h4 class="font-bold text-xl mb-4">Google Shopping: Visibilidad Directa de Productos</h4>
+                    <div class="card-bg p-6 rounded-lg shadow-sm mb-4">
+                        <p class="font-bold text-md mb-2 accent-color">Productos Clave a Promocionar:</p>
+                        <ul class="list-disc list-inside secondary-text text-sm space-y-1">
+                            <li>**Variador de Frecuencia:** (Objetivo: posicionar y que sea lo más vendido) - Foco en visibilidad premium, pujas agresivas.</li>
+                            <li>**Fuente de poder:** (Objetivo: posicionar) - Foco en visibilidad premium, pujas agresivas.</li>
+                            <li>**Límite de Carrera:** (#1 en Mercado Libre) - Prioridad alta para mantener liderazgo y defender posición.</li>
+                            <li>**Relé Interfaz ultra delgado:** (#2 más vendido) - Mantener volumen, alta competitividad.</li>
+                            <li>**Electroválvula neumática:** (#3) - Mantener volumen.</li>
+                            <li>**Selector:** (#4) - Mantener volumen.</li>
+                            <li>**Selector de 3 posiciones:** (#5) - Mantener volumen.</li>
+                        </ul>
+                    </div>
+                    <div class="card-bg p-6 rounded-lg shadow-sm">
+                        <p class="font-bold text-md mb-2 accent-color">Estrategia de Campaña y Detalles (Jumpseller Google Commerce):</p>
+                        <ul class="list-disc list-inside secondary-text text-sm space-y-1">
+                            <li>**Integración Jumpseller Google Commerce:** Asegurarse que el feed de productos se sincroniza diariamente, con toda la información requerida (títulos, descripciones, MPN, GTIN, categorías de Google, etc.).</li>
+                            <li>**Optimización de Títulos de Productos:** Muy descriptivos, incluyendo Marca, Modelo, Tipo de Repuesto, Especificaciones clave (ej. "Variador de Frecuencia Siemens SINAMICS V20 380V 4kW").</li>
+                            <li>**Segmentación de Productos:** Crear grupos de productos específicos para Variadores de Frecuencia y Fuentes de Poder con pujas más altas.</li>
+                            <li>**Estrategia de Bidding:** Iniciar con "Maximizar Clicks" con un límite de CPC para obtener visibilidad, luego cambiar a "Maximizar Conversiones" o "ROAS Objetivo" una vez que se acumulen suficientes datos de conversión y se pueda medir el retorno.</li>
+                            <li>**Promociones:** Utilizar el feed de promociones de Google Merchant Center para destacar descuentos o envíos gratis.</li>
+                        </ul>
+                    </div>
+                </div>
+                <div>
+                    <h4 class="font-bold text-xl mb-4">Google Search: Captura de Demanda Específica y Genérica</h4>
+                    <div class="card-bg p-6 rounded-lg shadow-sm mb-4">
+                        <p class="font-bold text-md mb-2 accent-color">Tipos de Campañas, Palabras Clave y Posicionamiento:</p>
+                        <ul class="list-disc list-inside secondary-text text-sm space-y-1">
+                            <li>**Campaña 1: Posicionamiento Marca & Productos Estrella (Exact Match, Posición 1-2):**
+                                <ul>
+                                    <li>`[variador de frecuencia]`, `[fuente de poder]`</li>
+                                    <li>`[variador de frecuencia siemens]`, `[fuente de poder schneider]`</li>
+                                </ul>
+                                **Objetivo:** Ser la primera opción para búsquedas de alta intención y volumen.
+                            </li>
+                            <li>**Campaña 2: Productos Más Vendidos (Frase Match, Broad Match Modificado):**
+                                <ul>
+                                    <li>`"limite de carrera"`, `+rele +interfaz`, `+electovalvula +neumatica`</li>
+                                </ul>
+                                **Objetivo:** Mantener el liderazgo y captar búsquedas variadas.
+                            </li>
+                            <li>**Campaña 3: Búsquedas Genéricas y de Nicho (Broad Match Modificado):**
+                                <ul>
+                                    <li>`+repuestos +electricos +automatizacion`, `+materiales +industriales +chile`</li>
+                                </ul>
+                                **Objetivo:** Expandir alcance, descubrir nuevas palabras clave.
+                            </li>
+                            <li>**Palabras Clave Negativas (Constante Actualización):** Excluir `gratis`, `usado`, `reparar`, `manual`, `tutorial`, `diagrama`, `foro`, `arriendo`, `segunda mano`, `empleo`.</li>
+                        </ul>
+                    </div>
+                    <div class="card-bg p-6 rounded-lg shadow-sm">
+                        <p class="font-bold text-md mb-2 accent-color">Anuncios de Texto y Extensiones (RSAs):</p>
+                        <ul class="list-disc list-inside secondary-text text-sm space-y-1">
+                            <li>**Anuncios de Búsqueda Adaptables (RSAs):** Mínimo 3 RSAs por grupo de anuncios, con al menos 10-15 titulares únicos y 3-4 descripciones.
+                                <ul>
+                                    <li>**Titulares:** Incluir KWs, destacar "Amplio Stock", "Despacho Rápido a Todo Chile", "Asesoría Técnica Especializada", "Precios Competitivos", "Marcas Premium".</li>
+                                    <li>**Descripciones:** Detallar la variedad de productos, la facilidad de compra en Jumpseller, el soporte post-venta.</li>
+                                </ul>
+                            </li>
+                            <li>**Extensiones de Anuncio:**
+                                <ul>
+                                    <li>**Sitelinks:** Enlaces a categorías clave (Variadores, Fuentes, Límites), página de contacto, marcas representadas.</li>
+                                    <li>**Fragmentos Estructurados:** "Marcas: Siemens, Schneider, Allen Bradley, ABB". "Tipos de Producto: PLC, Variadores, Sensores, Bornes".</li>
+                                    <li>**Llamada:** Número de teléfono directo para consultas técnicas o de venta.</li>
+                                    <li>**Ubicación:** Si hay una oficina o punto de retiro físico.</li>
+                                    <li>**Promoción:** Destacar ofertas activas.</li>
+                                </ul>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="consideration" class="py-16 scroll-mt-20 fade-in">
+            <div class="text-center mb-12">
+                <span class="accent-bg text-white font-semibold py-1 px-3 rounded-full text-sm">Fase 2</span>
+                <h3 class="text-3xl font-bold mt-4">Consideración e Interacción (Meta Ads & Brevo)</h3>
+                <p class="max-w-3xl mx-auto mt-2 secondary-text">
+                    En esta fase, nos enfocamos en reconectar con usuarios que ya mostraron interés en Impromax, cultivando su decisión de compra. Utilizamos Meta Ads para un remarketing visual potente y Brevo para la comunicación directa y personalizada.
+                </p>
+            </div>
+
+            <div class="grid md:grid-cols-2 gap-12">
+                 <div>
+                    <h4 class="font-bold text-xl mb-4">Meta Ads: Remarketing Estratégico y Expansión</h4>
+                    <div class="card-bg p-6 rounded-lg shadow-sm mb-4">
+                        <p class="font-bold text-md mb-2 accent-color">Configuración (Jumpseller Facebook/Instagram Integration):</p>
+                        <ul class="list-disc list-inside secondary-text text-sm space-y-1">
+                            <li>**Píxel de Meta:** Asegurar la correcta instalación y seguimiento de eventos clave (ViewContent, AddToCart, InitiateCheckout, Purchase) a través de la integración de Jumpseller.</li>
+                            <li>**Catálogo de Productos:** Sincronizar el catálogo de Jumpseller con Meta para habilitar los Anuncios de Carrito (DPA).</li>
+                            <li>**Integración de Tiendas (Facebook/Instagram Shop):** Habilitar si aplica para permitir compras directas desde las plataformas, potenciando la visibilidad.</li>
+                        </ul>
+                    </div>
+                    <div class="card-bg p-6 rounded-lg shadow-sm mb-4">
+                        <p class="font-bold text-md mb-2 accent-color">Campañas de Remarketing Dinámico (DPA - Prioridad Máxima):</p>
+                        <ul class="list-disc list-inside secondary-text text-sm space-y-1">
+                            <li>**Audiencias Personalizadas:**
+                                <ul>
+                                    <li>**Carritos Abandonados:** Usuarios que añadieron productos al carrito pero no compraron (1, 3, 7 días).</li>
+                                    <li>**Visitantes de Páginas de Productos:** Segmentar por productos vistos (ej. visitantes de Variadores de Frecuencia, Límites de Carrera) en los últimos 7, 14, 30, 60 días (excluyendo compradores).</li>
+                                </ul>
+                            </li>
+                            <li>**Creativos:** Carruseles dinámicos que muestran los productos exactos vistos o abandonados. Formatos de video corto explicando el beneficio.</li>
+                            <li>**Copy (Mensajes):**
+                                <ul>
+                                    <li>**Carritos Abandonados:** "¡No olvides tus repuestos de automatización! Tu carrito te espera.", "Completa tu compra y recibe un 5% de descuento [si hay oferta]".</li>
+                                    <li>**Visitantes de Productos:** "Vuelve a ver el [Producto Visto] que te interesó", "Amplio stock de [Tipo de Producto] para tu proyecto."</li>
+                                </ul>
+                                Generar urgencia/escasez si aplica.
+                            </li>
+                        </ul>
+                    </div>
+                    <div class="card-bg p-6 rounded-lg shadow-sm">
+                        <p class="font-bold text-md mb-2 accent-color">Audiencias Similares (Lookalike Audiences - Expansión y Nuevos Clientes):</p>
+                        <ul class="list-disc list-inside secondary-text text-sm space-y-1">
+                            <li>**Fuentes:** Basado en el 1-3% de tus clientes más valiosos (lista de emails de compradores, o audiencia de "compradores" del píxel).</li>
+                            <li>**Creativos:** Anuncios de imagen o video que destaquen la autoridad de Impromax, la amplitud de stock, la resolución de problemas en la industria. Foco en "Variador de Frecuencia" y "Fuente de Poder" para captar nuevos interesados en estos productos clave.</li>
+                            <li>**Objetivo de Campaña:** Tráfico cualificado o Conversiones, buscando nuevos usuarios con alta probabilidad de interés.</li>
+                        </ul>
+                    </div>
+                </div>
+                <div>
+                    <h4 class="font-bold text-xl mb-4">Email Marketing (Brevo): Cultivo de Leads y Persuasión</h4>
+                    <div class="card-bg p-6 rounded-lg shadow-sm mb-4">
+                        <p class="font-bold text-md mb-2 accent-color">Secuencias Automatizadas de Email Venta (Integración con Jumpseller):</p>
+                        <ul class="list-disc list-inside secondary-text text-sm space-y-1">
+                            <li>**Flujo de Carrito Abandonado:**
+                                <ul>
+                                    <li>**Email 1 (1 hora post-abandono):** Recordatorio amigable de los ítems en el carrito con imágenes de los productos y un CTA claro para retomar la compra.</li>
+                                    <li>**Email 2 (24 horas post-abandono):** Resaltar beneficios como "Despacho Rápido", "Garantía de Calidad", "Amplio Stock". Opcional: ofrecer un pequeño descuento (ej. 5% OFF en primera compra).</li>
+                                    <li>**Email 3 (48 horas post-abandono):** Última oportunidad para completar la compra, invitando a contactar soporte vía **WhatsApp Business** (enlace directo) si tienen dudas.</li>
+                                </ul>
+                            </li>
+                            <li>**Flujo de Navegación de Productos (con identificación de usuario):**
+                                <ul>
+                                    <li>Si un usuario identificado visita repetidamente productos de alta prioridad (Variadores, Fuentes de Poder) pero no añade al carrito, enviar un email con contenido relevante sobre esos productos, beneficios y casos de uso.</li>
+                                </ul>
+                            </li>
+                        </ul>
+                    </div>
+                    <div class="card-bg p-6 rounded-lg shadow-sm">
+                        <p class="font-bold text-md mb-2 accent-color">Contenido y Mensajes Clave en Emails:</p>
+                        <ul class="list-disc list-inside secondary-text text-sm space-y-1">
+                            <li>**Enfoque en Solución:** Cómo los productos de Impromax resuelven problemas específicos del cliente en automatización industrial.</li>
+                            <li>**Valor Agregado:** Comunicar la experiencia, el soporte técnico especializado y la fiabilidad de las marcas.</li>
+                            <li>**Urgencia/Beneficio:** Destacar stock disponible, rapidez de despacho.</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="conversion" class="py-16 scroll-mt-20 fade-in">
+            <div class="text-center mb-12">
+                <span class="accent-bg text-white font-semibold py-1 px-3 rounded-full text-sm">Fase 3</span>
+                <h3 class="text-3xl font-bold mt-4">Conversión (Jumpseller & CRO)</h3>
+                 <p class="max-w-3xl mx-auto mt-2 secondary-text">
+                    La clave en esta etapa es minimizar cualquier fricción en el proceso de compra. Una experiencia de usuario impecable en la plataforma Jumpseller es fundamental para convertir a los visitantes interesados en clientes. Aquí, cada detalle cuenta para asegurar que la "Sales Page" y el proceso de pago sean fluidos.
+                </p>
+            </div>
+
+            <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div class="card-bg p-6 rounded-lg shadow-sm">
+                    <h4 class="font-bold text-lg mb-2">🚀 Velocidad de Carga Optimizada</h4>
+                    <p class="secondary-text text-sm">Asegurar que Jumpseller carga rápidamente en todos los dispositivos. Esto es crucial para la retención y el SEO, evitando que los usuarios abandonen por lentitud.</p>
+                </div>
+                <div class="card-bg p-6 rounded-lg shadow-sm">
+                    <h4 class="font-bold text-lg mb-2">📄 Sales Page (Jumpseller): Claras y Completas</h4>
+                    <p class="secondary-text text-sm">Para Variadores de Frecuencia y Fuentes de Poder: Fichas técnicas detalladas, múltiples imágenes, videos de producto si es posible, especificaciones precisas (voltaje, potencia, dimensiones, marca, modelo, etc.), compatibilidad. Para todos los productos: Información clara de stock, precios transparentes. Botón "Añadir al Carrito" prominente y fácil de usar.</p>
+                </div>
+                <div class="card-bg p-6 rounded-lg shadow-sm">
+                    <h4 class="font-bold text-lg mb-2">🛒 Checkout Simplificado y Flexible</h4>
+                    <p class="secondary-text text-sm">Proceso de pago con los mínimos pasos necesarios. Ofrecer múltiples opciones de pago (Webpay, transferencia bancaria, pago con tarjeta) que sean seguras. Presentar costos y tiempos de envío claros antes de finalizar la compra. Permitir la compra como invitado para reducir la fricción.</p>
+                </div>
+                <div class="card-bg p-6 rounded-lg shadow-sm">
+                    <h4 class="font-bold text-lg mb-2">🛡️ Señales de Confianza Visibles</h4>
+                    <p class="secondary-text text-sm">Integrar sellos de seguridad (SSL, logos de bancos), logos de métodos de pago aceptados, y enlaces fáciles de encontrar a las políticas de privacidad, devolución y garantía.</p>
+                </div>
+                <div class="card-bg p-6 rounded-lg shadow-sm">
+                    <h4 class="font-bold text-lg mb-2">⭐ Reseñas de Productos Destacadas</h4>
+                    <p class="secondary-text text-sm">Fomentar y mostrar testimonios y reseñas de otros clientes en las páginas de producto. La prueba social es fundamental para productos industriales.</p>
+                </div>
+                <div class="card-bg p-6 rounded-lg shadow-sm">
+                    <h4 class="font-bold text-lg mb-2">💬 Soporte Inmediato vía WhatsApp Business (Jumpseller)</h4>
+                    <p class="secondary-text text-sm">Integrar el botón de **WhatsApp Business** de Jumpseller en las páginas de producto y el checkout. Esto permite a los clientes hacer consultas técnicas o de venta al instante, eliminando barreras de compra.</p>
+                </div>
+            </div>
+        </section>
+        
+        <section id="loyalty" class="py-16 scroll-mt-20 fade-in">
+            <div class="text-center mb-12">
+                <span class="accent-bg text-white font-semibold py-1 px-3 rounded-full text-sm">Fase 4</span>
+                <h3 class="text-3xl font-bold mt-4">Fidelización y Retención (Email Marketing & Servicio al Cliente)</h3>
+                <p class="max-w-3xl mx-auto mt-2 secondary-text">
+                    La venta no termina con el pago. Nuestro objetivo es construir una relación a largo plazo. Un cliente recurrente es más rentable y puede convertirse en un promotor de nuestra marca, lo que es crucial para el crecimiento sostenible de Impromax y la meta de ventas.
+                </p>
+            </div>
+            <div class="grid md:grid-cols-2 gap-8">
+                <div class="card-bg p-8 rounded-lg shadow-sm">
+                    <h4 class="font-bold text-xl mb-4">📧 Email Marketing Automatizado (Brevo)</h4>
+                    <ul class="space-y-3 list-disc list-inside secondary-text text-sm">
+                        <li>**Email de Bienvenida (Post-Compra):** Agradecimiento por la compra, resumen del pedido, invitación a conectar en redes sociales (Facebook/Instagram).</li>
+                        <li>**Confirmación de Compra y Seguimiento de Envío:** Indispensable para la confianza del cliente. Notificaciones automáticas sobre el estado del pedido, usando los datos de seguimiento.</li>
+                        <li>**Solicitud de Reseña:** Unos días después de la entrega, pedir al cliente que valore el producto y el servicio recibido.</li>
+                        <li>**Contenido de Valor:** Newsletters periódicas con:
+                            <ul>
+                                <li>Tips de mantenimiento y optimización para equipos de automatización.</li>
+                                <li>Novedades en tecnología industrial y lanzamientos de productos.</li>
+                                <li>Guías de uso avanzadas para productos clave (ej. Variadores de Frecuencia, Fuentes de Poder).</li>
+                                <li>Casos de éxito donde los repuestos de Impromax solucionaron problemas reales.</li>
+                            </ul>
+                        </li>
+                        <li>**Ofertas Exclusivas:** Enviar promociones personalizadas basadas en el historial de compra del cliente o en productos complementarios que podrían necesitar.</li>
+                        <li>**Recompra Inteligente:** Para productos con vida útil o de consumo periódico (ej. ciertos Relés, Electroválvulas), configurar recordatorios automáticos de posible necesidad de reemplazo.</li>
+                    </ul>
+                </div>
+                <div class="card-bg p-8 rounded-lg shadow-sm">
+                    <h4 class="font-bold text-xl mb-4">🤝 Servicio al Cliente Excepcional</h4>
+                     <ul class="space-y-3 list-disc list-inside secondary-text text-sm">
+                        <li>**Soporte Técnico Especializado:** Un equipo altamente capacitado para ofrecer consultoría pre-venta y resolución de problemas post-venta, dada la complejidad de los productos de automatización.</li>
+                        <li>**Canales de Comunicación Eficaces:** Proveer acceso fácil a soporte vía teléfono, email y, crucialmente, **WhatsApp Business (integrado con Jumpseller)** para consultas rápidas y personalizadas.</li>
+                        <li>**Gestión Proactiva de Incidencias:** Comunicación transparente y resolución ágil de cualquier problema o devolución para mantener la satisfacción del cliente.</li>
+                        <li>**Feedback Loop:** Utilizar las reseñas, encuestas de satisfacción y el contacto directo para mejorar continuamente la oferta de productos y la experiencia del cliente.</li>
+                        <li>**Programas de Lealtad (a futuro):** Considerar implementar un sistema de puntos, descuentos por volumen o beneficios exclusivos para clientes frecuentes y de alto valor, incentivando la compra repetida y la relación a largo plazo.</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+        
+    </main>
+    
+    <footer class="bg-white mt-16">
+        <div class="container mx-auto px-6 py-8 text-center secondary-text">
+             <p class="font-bold text-lg mb-4 primary-text">Herramientas Clave</p>
+             <div class="flex justify-center items-center gap-4 md:gap-8 flex-wrap text-sm">
+                <span>Google Ads</span> •
+                <span>Google Analytics 4</span> •
+                <span>Meta Ads Manager</span> •
+                <span>**Jumpseller (Plataforma E-commerce)**</span> •
+                <span>**Jumpseller Google Commerce**</span> •
+                <span>**Jumpseller Facebook/Instagram Integration**</span> •
+                <span>**Jumpseller WhatsApp Business**</span> •
+                <span>Brevo (Email Marketing)</span> •
+                <span>Google Merchant Center</span>
+             </div>
+             <p class="text-xs mt-8">&copy; 2024 Panel Interactivo para Impromax. Todos los derechos reservados.</p>
+        </div>
+    </footer>
+
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const chartColors = ['#D97706', '#FB923C', '#FDBA74'];
+
+            const createDonutChart = (ctx, labels, data, title) => {
+                new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: title,
+                            data: data,
+                            backgroundColor: chartColors,
+                            borderColor: '#F8F7F4',
+                            borderWidth: 4,
+                            hoverOffset: 8
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        cutout: '60%',
+                        plugins: {
+                            legend: {
+                                position: 'bottom',
+                                labels: {
+                                    padding: 20,
+                                    font: {
+                                        family: "'Inter', sans-serif"
+                                    }
+                                }
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        let label = context.label || '';
+                                        if (label) {
+                                            label += ': ';
+                                        }
+                                        if (context.parsed !== null) {
+                                            label += context.parsed + '%';
+                                        }
+                                        return label;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            };
+
+            const googleCtx = document.getElementById('googleAdsChart')?.getContext('2d');
+            if (googleCtx) {
+                createDonutChart(googleCtx, ['Google Shopping', 'Google Search'], [65, 35], 'Presupuesto Google Ads'); /* Adjusted for positioning focus */
+            }
+
+            const metaCtx = document.getElementById('metaAdsChart')?.getContext('2d');
+            if (metaCtx) {
+                createDonutChart(metaCtx, ['Remarketing Dinámico', 'Audiencias Similares'], [70, 30], 'Presupuesto Meta Ads');
+            }
+            
+            const mobileNav = document.getElementById('mobile-nav');
+            if(mobileNav) {
+                mobileNav.addEventListener('change', (e) => {
+                    if(e.target.value && e.target.value !== '#') {
+                        window.location.href = e.target.value;
+                    }
+                });
+            }
+
+            // Function to scroll to a section
+            window.scrollToSection = (id) => {
+                const element = document.getElementById(id);
+                if (element) {
+                    element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+            };
+
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('is-visible');
+                    }
+                });
+            }, {
+                threshold: 0.1
+            });
+
+            document.querySelectorAll('.fade-in').forEach(el => {
+                observer.observe(el);
+            });
+
+            // Adjust remarketing lines based on element positions
+            const adjustRemarketingLines = () => {
+                const salesPageBox = document.getElementById('sales-page-box');
+                const remarketingPathContainer = document.getElementById('remarketing-path-container');
+                const line1 = document.getElementById('remarketing-line-1');
+                const line2 = document.getElementById('remarketing-line-2');
+                const line3 = document.getElementById('remarketing-line-3');
+                const line4 = document.getElementById('remarketing-line-4');
+
+                if (salesPageBox && remarketingPathContainer && line1 && line2 && line3 && line4) {
+                    const salesRect = salesPageBox.getBoundingClientRect();
+                    const remarketingRect = remarketingPathContainer.getBoundingClientRect();
+                    const containerRect = salesPageBox.closest('.new-funnel-container').getBoundingClientRect();
+
+                    const salesCenterX = salesRect.left + salesRect.width / 2 - containerRect.left;
+                    const salesBottomY = salesRect.bottom - containerRect.top;
+                    const remarketingTopY = remarketingRect.top - containerRect.top;
+                    const remarketingLeftX = remarketingRect.left - containerRect.left;
+                    const remarketingRightX = remarketingRect.right - containerRect.left;
+                    const remarketingCenterY = remarketingRect.top + remarketingRect.height / 2 - containerRect.top;
+
+                    // Ensure the main funnel path is positioned to allow vertical lines to drop
+                    const mainPathRect = salesPageBox.closest('.funnel-main-path').getBoundingClientRect();
+                    const mainPathRelativeBottom = mainPathRect.bottom - containerRect.top;
+
+
+                    if (window.innerWidth >= 768) { // Desktop layout
+                        // Line down from Sales Page to horizontal remarketing entry
+                        line1.style.cssText = `
+                            left: ${salesCenterX}px;
+                            top: ${salesBottomY}px;
+                            height: ${(remarketingTopY + remarketingRect.height/2) - salesBottomY}px;
+                            width: 2px;
+                            transform: none;
+                        `;
+                        line1.classList.remove('hidden');
+
+                        // Horizontal line to Remarketing block start
+                        line2.style.cssText = `
+                            left: ${salesCenterX}px;
+                            top: ${remarketingCenterY}px;
+                            width: ${remarketingLeftX - salesCenterX}px;
+                            transform: none;
+                        `;
+                        line2.classList.remove('hidden');
+
+                        // Vertical line from right of Remarketing block back up to Sales Page (this might need adjustment depending on how it connects to sales page in diagram)
+                        // This line intends to connect the far right of the remarketing path back up to the sales page's vertical center.
+                        line3.style.cssText = `
+                            left: ${remarketingRightX}px;
+                            top: ${remarketingCenterY}px;
+                            height: ${salesRect.top - containerRect.top + (salesRect.height/2) - remarketingCenterY}px; /* Adjusted to reach mid-height of sales page */
+                            width: 2px;
+                            transform: none;
+                        `;
+                        line3.classList.remove('hidden');
+
+                        // Horizontal line from end of Remarketing loop back to Sales Page
+                        line4.style.cssText = `
+                            left: ${salesCenterX}px;
+                            top: ${salesRect.top - containerRect.top + (salesRect.height/2)}px; /* Align with middle of sales page */
+                            width: ${remarketingRightX - salesCenterX}px;
+                            transform: none;
+                        `;
+                        line4.classList.remove('hidden');
+
+                    } else { // Mobile layout (vertical flow) - lines should be hidden or adjusted if needed
+                        line1.classList.add('hidden');
+                        line2.classList.add('hidden');
+                        line3.classList.add('hidden');
+                        line4.classList.add('hidden');
+                    }
+                }
+            };
+
+            // Call on load and resize
+            adjustRemarketingLines();
+            window.addEventListener('resize', adjustRemarketingLines);
+            // Also call after potential content changes that might shift elements
+            setTimeout(adjustRemarketingLines, 500); // Small delay to ensure elements are rendered
+        });
+    </script>
+</body>
+</html>
